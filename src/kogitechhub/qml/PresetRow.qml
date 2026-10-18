@@ -64,7 +64,7 @@ Rectangle {
         validator: IntValidator { bottom: 1; top: 99999 }
         onAccepted: {
             var v = parseInt(text)
-            if (!isNaN(v)) app.setDpiExact(root.idx, v)
+            if (!isNaN(v)) app.setDpiTyped(root.idx, v)
             root.editing = false
         }
         onActiveFocusChanged: if (!activeFocus) root.editing = false

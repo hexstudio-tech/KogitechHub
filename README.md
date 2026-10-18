@@ -17,14 +17,18 @@ Configuratore di mouse per Linux, con interfaccia scura ispirata a Logitech G HU
   - **trascinamento del pallino** → cambia il valore e riordina da solo i preset;
   - **trascinamento del pallino lontano dalla barra + rilascio** → rimuove il preset;
   - **frecce ←/→** (o doppio clic sul valore nel pannello) → sposta il preset attivo.
-- **Valore digitato rispettato**: 1600 resta 1600. Lo snappamento alla griglia del
-  dispositivo vale solo per il trascinamento e per i valori suggeriti.
+- **Valore digitato**: rispettato quando il mouse lo supporta. Se il dispositivo ha una
+  griglia di valori (per esempio il G402 accetta solo 252, 302, 352, 402, …, 1602, 3202) e il
+  numero digitato non esiste, viene scritto il valore supportato più vicino e l'app lo dice con
+  un avviso — scrivere un valore inesistente verrebbe **ignorato dal mouse** e la modifica
+  sembrerebbe non funzionare.
 - **Preset di avvio** (riquadro ambra): il DPI che il mouse usa all'accensione, modificabile.
 - **Tasti DPI del mouse**: i preset restano in ordine crescente, quindi "DPI su" aumenta e
   "DPI giù" diminuisce. Le scelte fatte con i tasti fisici vengono rilette ogni ~2 secondi.
 - **Frequenza di report** (125/250/500/1000 Hz, in base a ciò che il mouse dichiara).
 - **Preset di fabbrica**: "Ripristina predefiniti" scrive 400/800/1600/3200 DPI con avvio a 800
-  e frequenza massima.
+  e frequenza massima; se il mouse ha una griglia diversa (G402: 402/802/1602/3202) usa i valori
+  supportati più vicini, così la scrittura va a buon fine.
 - Le impostazioni vengono scritte nella **memoria onboard** del mouse: restano attive anche
   senza KogitechHub e anche su un altro computer.
 
@@ -50,12 +54,24 @@ Se `dnf` non trova `python3-pyside6`: `pip install --user PySide6`.
 ./run.sh --mock       # prova l'interfaccia con mouse simulati, senza hardware
 ```
 
-Installazione nel menu applicazioni (opzionale):
+Ad ogni avvio `run.sh` installa in modo idempotente la voce nelle applicazioni:
+dopo la prima esecuzione **KogitechHub si trova nella ricerca con il tasto Super**
+(menu Start), con l'icona del progetto. Nessun `sudo` richiesto:
+
+- `~/.local/share/applications/kogitechhub.desktop` (con `Icon=` che punta
+  all'SVG del progetto: l'icona non dipende dalla cache del tema)
+- `~/.local/share/icons/hicolor/scalable/apps/kogitechhub.svg` e
+  `~/.local/share/icons/hicolor/256x256/apps/kogitechhub.png` (stessa icona nel
+  tema, per chi cerca l'app per nome)
+
+Se sposti la cartella del progetto, riesegui `./run.sh` per aggiornare il percorso
+memorizzato nella voce. Per toglierla:
 
 ```bash
-pip install --user --no-deps .
-install -Dm644 data/kogitechhub.desktop ~/.local/share/applications/kogitechhub.desktop
-install -Dm644 data/kogitechhub.svg ~/.local/share/icons/hicolor/scalable/apps/kogitechhub.svg
+rm ~/.local/share/applications/kogitechhub.desktop \
+   ~/.local/share/icons/hicolor/scalable/apps/kogitechhub.svg \
+   ~/.local/share/icons/hicolor/256x256/apps/kogitechhub.png
+update-desktop-database ~/.local/share/applications
 ```
 
 ## Come funziona
@@ -99,8 +115,8 @@ ratbag contro un finto `ratbagd` su bus di sessione (`KOGITECHHUB_BUS=session`).
 - Un mouse appare in sola lettura: libratbag non lo supporta (`ratbagctl list` non lo elenca).
 - I mouse wireless dietro un ricevitore (Unifying/Nano) non sono ancora configurabili.
 - I valori DPI che il mouse accetta sono quelli che dichiara il dispositivo: digitandone
-  uno diverso dal set supportato, il mouse può arrotondarlo (KogitechHub mostra sempre
-  il valore che il dispositivo ha effettivamente memorizzato).
+  uno diverso dal set supportato, l'app lo converte nel valore supportato più vicino e lo
+  segnala (KogitechHub mostra sempre il valore che il dispositivo ha effettivamente memorizzato).
 
 ## Crediti
 

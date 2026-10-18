@@ -114,7 +114,7 @@ Item {
         root.editingIdx = -1
         var v = parseInt(text)
         if (!isNaN(v)) {
-            app.setDpiExact(i, v)          // valore digitato: scritto così com'è
+            app.setDpiTyped(i, v)           // digitato: esatto se il mouse lo supporta
             app.commitNow()
         }
     }

@@ -309,11 +309,23 @@ class Controller(QObject):
     def setDpi(self, idx, dpi):
         return self._edit(lambda s: model.set_dpi(s, idx, dpi), idx)
 
-    @Slot(int, int, result=int)
-    def setDpiExact(self, idx, dpi):
-        """Valore digitato dall'utente: scritto così com'è, senza agganciarlo
-        alla lista dei valori supportati."""
-        return self._edit(lambda s: model.set_dpi(s, idx, dpi, exact=True), idx)
+    @Slot(int, int)
+    def setDpiTyped(self, idx, dpi):
+        """Valore digitato dall'utente.
+
+        Viene scritto così com'è solo se il dispositivo lo supporta: molti mouse
+        (Logitech G402 e simili) hanno una griglia di valori e ignorano in
+        silenzio qualsiasi altro numero, quindi in quel caso si scrive il valore
+        supportato più vicino e si avvisa.
+        """
+        wanted = int(dpi)
+        new_idx = self._edit(lambda s: model.set_dpi(s, idx, wanted, exact=True), idx)
+        presets = self._current.get("presets", [])
+        if 0 <= new_idx < len(presets):
+            written = presets[new_idx]["dpi"]
+            if written != wanted:
+                self._notify(f"{wanted} DPI non sono supportati da questo mouse: "
+                             f"impostati {written}.")
 
     @Slot(int, result=int)
     def addPresetAt(self, dpi):
@@ -337,9 +349,15 @@ class Controller(QObject):
 
     @Slot()
     def restoreDefaults(self):
+        before = [p["dpi"] for p in self._current.get("presets", [])]
         self._edit(lambda s: model.restore_defaults(s))
         if self._dirty:
-            self._notify("Preset predefiniti ripristinati.")
+            after = [p["dpi"] for p in self._current.get("presets", [])]
+            if before != after:
+                self._notify("Preset predefiniti ripristinati: "
+                             + "/".join(str(d) for d in after) + " DPI.")
+            else:
+                self._notify("Preset predefiniti ripristinati.")
             self._do_commit()
 
 

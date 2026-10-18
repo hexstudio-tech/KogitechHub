@@ -68,19 +68,30 @@ def set_default(state: dict, idx: int) -> None:
             p["default"] = i == idx
 
 
+def fit(state: dict, dpi: int) -> int:
+    """Il valore se il dispositivo lo supporta, altrimenti il supportato più vicino.
+
+    I mouse Logitech (es. G402) hanno solo una griglia di valori (252, 302, 352,
+    402, ...) e ignorano silenziosamente qualsiasi altro numero: è il firmware a
+    non avere un 1600, non un problema di scrittura.
+    """
+    values = state.get("dpiList") or []
+    if not values or int(dpi) in values:
+        return int(dpi)
+    return snap(state, dpi)
+
+
 def set_dpi(state: dict, idx: int, dpi: int, exact: bool = False) -> int:
     """Cambia il DPI di un preset. Restituisce il suo nuovo indice.
 
-    exact=True scrive il valore così com'è (limitato all'intervallo del
-    dispositivo): serve quando l'utente digita un valore, che va rispettato.
-    Altrimenti il valore viene agganciato alla lista dei valori supportati,
-    comodo durante il trascinamento.
+    exact=True è per i valori digitati: scrive il numero come digitato quando il
+    dispositivo lo supporta, altrimenti il supportato più vicino (la UI avvisa).
     """
     presets = state["presets"]
     if not 0 <= idx < len(presets):
         return idx
     if exact:
-        new = max(state["dpiMin"], min(state["dpiMax"], int(dpi)))
+        new = fit(state, dpi)
     else:
         new = snap(state, dpi)
     if new == presets[idx]["dpi"]:
@@ -152,9 +163,10 @@ def nudge(state: dict, delta: int) -> int:
 def restore_defaults(state: dict) -> None:
     """Preset di fabbrica: 400/800/1600/3200 DPI, avvio a 800, massima frequenza.
 
-    I valori di fabbrica vengono scritti così come sono: niente aggancio alla
-    griglia, che sui mouse Logitech finirebbe per scrivere 402/802/1602/3202
-    invece di 400/800/1600/3200.
+    I valori di fabbrica vengono scritti così come sono quando il dispositivo li
+    supporta; su un mouse con una griglia diversa (es. G402: 402/802/1602/3202)
+    si usa il valore supportato più vicino, altrimenti la scrittura sarebbe
+    ignorata dal mouse.
     """
     presets = state["presets"]
     if state.get("canResize"):
@@ -166,8 +178,9 @@ def restore_defaults(state: dict) -> None:
     for v in DEFAULT_PRESETS:
         if len(wanted) == count:
             break
-        if v not in wanted and state["dpiMin"] <= v <= state["dpiMax"]:
-            wanted.append(v)
+        s = fit(state, v)
+        if s not in wanted:
+            wanted.append(s)
     spread = values[:: max(1, len(values) // max(count, 1))] if values else []
     for v in spread:                      # eventuali slot in più: punto più "vuoto"
         if len(wanted) == count:
@@ -175,7 +188,9 @@ def restore_defaults(state: dict) -> None:
         s = snap(state, v)
         if s not in wanted:
             wanted.append(s)
-    start = DEFAULT_START if DEFAULT_START in wanted else snap(state, DEFAULT_START)
+    start = fit(state, DEFAULT_START)
+    if start not in wanted:
+        start = snap(state, DEFAULT_START)
     if start not in wanted:
         start = wanted[min(1, len(wanted) - 1)]
     state["presets"] = [{"dpi": v, "active": v == start, "default": v == start} for v in wanted]

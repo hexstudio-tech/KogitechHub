@@ -40,16 +40,31 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(model.set_dpi(st, 1, 1600), 1)
         self.assertEqual(st["presets"][1]["dpi"], 800)
 
-    def test_set_dpi_exact_keeps_typed_value(self):
+    def test_set_dpi_typed_uses_device_supported_value(self):
+        st = make_state()                       # griglia del mock: multipli di 50
+        model.set_dpi(st, 1, 1234, exact=True)  # 1234 non esiste sul dispositivo
+        self.assertEqual(st["presets"][1]["dpi"], 1250)
+        model.set_dpi(st, 1, 1250, exact=True)  # questo esiste: scritto come digitato
+        self.assertEqual(st["presets"][1]["dpi"], 1250)
+
+    def test_set_dpi_typed_on_logitech_grid(self):
+        """Il G402 supporta solo 252/302/... : digitare 1600 deve scrivere 1602,
+        altrimenti il mouse ignora la scrittura e torna al valore precedente."""
         st = make_state()
-        # senza exact il valore viene agganciato alla griglia (1250)
-        model.set_dpi(st, 0, 1234)
-        self.assertIn(1250, [p["dpi"] for p in st["presets"]])
-        # con exact va scritto così com'è, limitato all'intervallo del dispositivo
-        model.set_dpi(st, 1, 1234, exact=True)
+        st["dpiList"] = [252 + 50 * i for i in range(12)] + [1602, 3202]
+        st["dpiMin"], st["dpiMax"] = st["dpiList"][0], st["dpiList"][-1]
+        st["presets"] = [{"dpi": 402, "active": True, "default": True},
+                         {"dpi": 1602, "active": False, "default": False}]
+        model.set_dpi(st, 0, 1600, exact=True)
+        self.assertIn(1602, [p["dpi"] for p in st["presets"]])
+        model.set_dpi(st, 1, 1602, exact=True)
+        self.assertIn(1602, [p["dpi"] for p in st["presets"]])
+
+    def test_set_dpi_typed_without_device_list(self):
+        st = make_state()
+        st["dpiList"] = []                        # il dispositivo non elenca valori
+        model.set_dpi(st, 0, 1234, exact=True)
         self.assertIn(1234, [p["dpi"] for p in st["presets"]])
-        model.set_dpi(st, 1, 99999, exact=True)
-        self.assertIn(4000, [p["dpi"] for p in st["presets"]])
 
     def test_add_and_remove(self):
         st = make_state()
@@ -97,6 +112,15 @@ class ModelTests(unittest.TestCase):
         self.assertEqual([p["dpi"] for p in st["presets"]], [400, 800, 1600, 3200])
         self.assertEqual([p["default"] for p in st["presets"]], [False, True, False, False])
         self.assertEqual(st["reportRate"], 1000)
+
+    def test_restore_defaults_on_logitech_grid(self):
+        """Su una griglia Logitech i valori di fabbrica vengono adattati:
+        scrivere 400/1600 su un G402 sarebbe ignorato dal mouse."""
+        st = make_state()
+        st["dpiList"] = [252 + 50 * i for i in range(76)]   # 252 ... 4002
+        st["dpiMin"], st["dpiMax"] = st["dpiList"][0], st["dpiList"][-1]
+        model.restore_defaults(st)
+        self.assertEqual([p["dpi"] for p in st["presets"]], [402, 802, 1602, 3202])
 
     def test_restore_defaults_fixed_slots(self):
         st = make_state()

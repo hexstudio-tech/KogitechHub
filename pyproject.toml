@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kogitechhub"
+version = "0.1.0"
+description = "Configuratore di mouse (DPI, preset, report rate) per Linux basato su libratbag"
+requires-python = ">=3.10"
+dependencies = []          # PySide6 e PyGObject vanno installati dai pacchetti di sistema
+
+[project.scripts]
+kogitechhub = "kogitechhub.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+kogitechhub = ["qml/*.qml", "qml/*.svg"]

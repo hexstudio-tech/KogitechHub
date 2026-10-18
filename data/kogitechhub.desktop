@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=KogitechHub
+Comment=Configura DPI e frequenza di report del mouse
+Exec=kogitechhub
+Icon=kogitechhub
+Categories=Settings;HardwareSettings;
+Terminal=false
+StartupWMClass=kogitechhub

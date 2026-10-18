@@ -34,25 +34,60 @@ Configuratore di mouse per Linux, con interfaccia scura ispirata a Logitech G HU
 
 ## Requisiti
 
-- Python 3.10+
-- PySide6 (Qt 6) e PyGObject
+- Linux con Python 3.10+
+- PySide6 (Qt 6) per l'interfaccia
+- PyGObject per il collegamento D-Bus a ratbagd
 - `ratbagd` attivo (fa da ponte verso il mouse; nessun accesso diretto a `/dev/hidraw*`)
 
-## Installazione (Nobara / Fedora)
+Funziona su qualunque distribuzione: **Fedora, Nobara, RHEL, Debian, Ubuntu, Linux Mint,
+Pop!_OS, Mobian (Raspberry Pi), Arch, Manjaro, openSUSE, Gentoo**. Non servono `sudo`
+per lanciarlo e nessuna regola udev.
+
+## Installazione
+
+Il modo più semplice su ogni distro è `./run.sh`: lo script controlla le dipendenze,
+installa la voce nel menu e poi avvia l'app. Per installare prima i pacchetti:
+
+| Distro | Comando |
+|---|---|
+| Fedora / Nobara / RHEL | `sudo dnf install python3-pyside6 python3-gobject libratbag-ratbagd` |
+| Debian / Ubuntu / Mint / Mobian | `sudo apt install python3-pyside6 python3-gi ratbagd` |
+| Arch / Manjaro | `sudo pacman -S python-pyside6 python-gobject ratbagd` |
+| openSUSE | `sudo zypper install python3-pyside6 python3-gobject ratbagd` |
+
+Se la tua distribuzione non ha PySide6 nei repository (comune su Debian/Ubuntu
+e su ARM), installalo da pip:
 
 ```bash
-sudo dnf install python3-pyside6 python3-gobject libratbag-ratbagd
+pip install --user PySide6          # alternativa: python3-pyside6
+```
+
+Poi abilita il servizio una volta sola:
+
+```bash
 sudo systemctl enable --now ratbagd
 ```
 
-Se `dnf` non trova `python3-pyside6`: `pip install --user PySide6`.
+### Verifica dell'ambiente
+
+```bash
+./run.sh --check        # oppure: python3 -m kogitechhub --check
+```
+
+Stampa distribuzione, versione di Python/Qt, PyGObject, stato di ratbagd, mouse trovati
+e se la voce nel menu è installata, con il comando giusto per la tua distro se qualcosa
+manca. Funziona anche senza interfaccia grafica (utile su server o via ssh).
 
 ## Avvio
 
 ```bash
 ./run.sh              # dalla cartella del progetto
 ./run.sh --mock       # prova l'interfaccia con mouse simulati, senza hardware
+./run.sh --check      # verifica dipendenze e servizi, poi esce
 ```
+
+Funziona sia su Wayland sia su X11, su Plasma, GNOME, Cinnamon, XFCE e desktop
+simili: la voce nel menu è un file `.desktop` standard con l'icona del progetto.
 
 Ad ogni avvio `run.sh` installa in modo idempotente la voce nelle applicazioni:
 dopo la prima esecuzione **KogitechHub si trova nella ricerca con il tasto Super**
@@ -106,8 +141,10 @@ Tre dettagli di `ratbagd` (libratbag 0.18) che il backend rispetta:
 PYTHONPATH=src dbus-run-session -- python3 -m unittest discover -s tests
 ```
 
-Copre il modello dati, il rilevamento da `/proc/bus/input`, il controller e il backend
-ratbag contro un finto `ratbagd` su bus di sessione (`KOGITECHHUB_BUS=session`).
+Copre il modello dati, il rilevamento da `/proc/bus/input`, il controller, il
+rilevamento della distribuzione (con `/etc/os-release` finti: Fedora, Debian, Ubuntu,
+Mint, Mobian, Arch, openSUSE) e il backend ratbag contro un finto `ratbagd` su bus di
+sessione (`KOGITECHHUB_BUS=session`).
 
 ## Problemi comuni
 

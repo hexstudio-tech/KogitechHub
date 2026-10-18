@@ -19,6 +19,7 @@ from .backends.ratbag import RatbagBackend
 from .backends.sysinput import SysInputBackend
 from .core import model
 from .core.engine import Engine
+from .deps import ratbagd_hint
 from .theme import THEME, resolve_font_family
 
 QML_DIR = Path(__file__).parent / "qml"
@@ -26,10 +27,6 @@ ICON = Path(__file__).parent / "qml" / "kogitechhub.svg"
 COMMIT_DELAY_MS = 350      # attesa dopo l'ultima modifica prima di scrivere sul mouse
 COMMIT_MAX_WAIT = 0.6      # durante un trascinamento scrive comunque ogni ~0,6 s
 POLL_MS = 2000
-
-RATBAG_HINT = ("KogitechHub non riesce a parlare con libratbag ({msg}). Installa e avvia il servizio:\n"
-               "sudo dnf install libratbag-ratbagd\n"
-               "sudo systemctl enable --now ratbagd")
 
 
 class Controller(QObject):
@@ -171,7 +168,7 @@ class Controller(QObject):
             self._backends = status
             self.backendsChanged.emit()
         bad = next((s for s in status if s["id"] == "ratbag" and not s["ok"]), None)
-        hint = RATBAG_HINT.format(msg=bad["message"] or "servizio non raggiungibile") if bad else ""
+        hint = ratbagd_hint(bad["message"]) if bad else ""
         if hint != self._hint:
             self._hint = hint
             self.hintChanged.emit()
@@ -362,9 +359,19 @@ class Controller(QObject):
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(prog="kogitechhub", description="Configuratore per mouse su Linux")
+    parser = argparse.ArgumentParser(prog="kogitechhub",
+                                     description="Configuratore per mouse su Linux")
     parser.add_argument("--mock", action="store_true", help="usa mouse simulati (senza hardware)")
+    parser.add_argument("--check", action="store_true",
+                        help="verifica dipendenze e servizi, poi esce")
     args, qt_args = parser.parse_known_args(argv if argv is not None else sys.argv[1:])
+
+    if args.check:
+        from .doctor import report
+
+        text, code = report()
+        print(text)
+        return code
 
     app = QGuiApplication([sys.argv[0], *qt_args])
     app.setApplicationName("KogitechHub")

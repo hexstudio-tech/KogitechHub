@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kogitechhub"
 version = "0.1.0"
-description = "Configuratore di mouse (DPI, preset, report rate) per Linux basato su libratbag"
+description = "Configuratore Linux per mouse (libratbag), RGB di tastiere e cuffie (OpenRGB) e cuffie USB (HeadsetControl)"
 requires-python = ">=3.10"
-dependencies = []          # PySide6 e PyGObject vanno installati dai pacchetti di sistema
+dependencies = []          # PySide6/PyGObject: pacchetti di sistema oppure .venv locale (run.sh)
 
 [project.scripts]
 kogitechhub = "kogitechhub.app:main"

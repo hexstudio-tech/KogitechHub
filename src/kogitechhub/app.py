@@ -13,13 +13,17 @@ from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 
 from . import __version__
+from .backends import openrgb
 from .backends.base import BackendError
+from .backends.headset import HeadsetBackend
 from .backends.mock import MockBackend
+from .backends.openrgb import OpenRGBBackend
 from .backends.ratbag import RatbagBackend
 from .backends.sysinput import SysInputBackend
 from .core import model
 from .core.engine import Engine
 from .deps import ratbagd_hint
+from .hidlab import HidLab
 from .theme import THEME, resolve_font_family
 
 QML_DIR = Path(__file__).parent / "qml"
@@ -59,6 +63,7 @@ class Controller(QObject):
         self._first_dirty = 0.0
         self._gen = 0
         self._open_id = ""
+        self.lab = HidLab(self._notify)     # laboratorio HID (pagina di sniffing)
 
         self._commit_timer = QTimer(self)
         self._commit_timer.setSingleShot(True)
@@ -117,6 +122,7 @@ class Controller(QObject):
 
     def shutdown(self):
         self._poll_timer.stop()
+        self.lab.shutdown()
         self._pool.shutdown(wait=False, cancel_futures=True)
 
     def _run(self, fn, *args):
@@ -134,7 +140,7 @@ class Controller(QObject):
         self._run(self._task_devices)
 
     def _poll(self):
-        if self._applying or self._dirty:
+        if self._applying or self._dirty or self._page == "sniff":
             return
         if self._page == "device" and self._open_id:
             self._run(self._task_load, self._open_id, self._gen)
@@ -219,6 +225,7 @@ class Controller(QObject):
 
     @Slot(str)
     def openDevice(self, dev_id):
+        self.lab.stop()
         self._gen += 1
         self._open_id = dev_id
         self._dirty = False
@@ -226,6 +233,10 @@ class Controller(QObject):
         summary = next((d for d in self._devices if d["id"] == dev_id), {})
         self._current = {"id": dev_id, "name": summary.get("name", ""), "vendor": summary.get("vendor", ""),
                          "vendorId": summary.get("vendorId", ""), "productId": summary.get("productId", ""),
+                         "kind": summary.get("kind", "other"),
+                         "lighting": bool(summary.get("lighting")),
+                         "headset": bool(summary.get("headset")),
+                         "subtitle": summary.get("subtitle", ""),
                          "configurable": summary.get("configurable", False), "loading": True,
                          "presets": [], "reportRates": [], "details": {}, "note": ""}
         self.currentChanged.emit()
@@ -234,14 +245,21 @@ class Controller(QObject):
 
     @Slot()
     def goBack(self):
+        self.lab.stop()
         self._flush_before_leaving()
         self._set_page("dashboard")
         self.refresh()
 
     @Slot()
     def showDevice(self):
+        self.lab.stop()
         if self._open_id:
             self._set_page("device")
+
+    @Slot()
+    def showSniffer(self):
+        """Apre la pagina del laboratorio HID (i nodi li carica `sniffer`)."""
+        self._set_page("sniff")
 
     @Slot()
     def showAbout(self):
@@ -257,12 +275,23 @@ class Controller(QObject):
     def _editable(self):
         return bool(self._current.get("configurable")) and not self._current.get("loading")
 
+    def _desired(self) -> dict:
+        """Parte dello stato da scrivere sul dispositivo (mouse, luci o cuffia)."""
+        state = self._current
+        if state.get("kind") == "mouse" or state.get("presets"):
+            return model.desired(state)
+        if state.get("lighting"):
+            return {key: state.get(key) for key in ("mode", "color", "brightness", "speed")}
+        if state.get("headset"):
+            return {key: state.get(key) for key in ("sidetone", "lights", "inactive")}
+        return {}
+
     def _edit(self, fn, default=None):
         if not self._editable():
             return default
-        before = copy.deepcopy((self._current["presets"], self._current.get("reportRate")))
+        before = copy.deepcopy(self._desired())
         result = fn(self._current)
-        if before != (self._current["presets"], self._current.get("reportRate")):
+        if before != self._desired():
             self._touch()
         return result
 
@@ -292,7 +321,7 @@ class Controller(QObject):
         self._dirty = False
         self._applying = True
         self.syncingChanged.emit()
-        self._run(self._task_apply, self._open_id, model.desired(self._current), self._gen)
+        self._run(self._task_apply, self._open_id, self._desired(), self._gen)
 
     @Slot(int)
     def selectPreset(self, idx):
@@ -340,6 +369,47 @@ class Controller(QObject):
     def setReportRate(self, hz):
         self._edit(lambda s: model.set_rate(s, hz))
 
+    # ---- illuminazione (OpenRGB) --------------------------------------------
+    @Slot(str)
+    def setLightingMode(self, name):
+        if name not in self._current.get("modes", []):
+            return
+        self._edit(lambda s: s.update(mode=name))
+
+    @Slot(str, result=bool)
+    def setLightingColor(self, value):
+        color = openrgb.normalize_color(value)
+        if not color:
+            self._notify("Colore non valido: usa un esadecimale come #7B6CFF.", True)
+            return False
+        self._edit(lambda s: s.update(color=color))
+        return True
+
+    @Slot(int)
+    def setLightingBrightness(self, value):
+        self._edit(lambda s: s.update(brightness=max(0, min(100, int(value)))))
+
+    @Slot(int)
+    def setLightingSpeed(self, value):
+        self._edit(lambda s: s.update(speed=max(0, min(100, int(value)))))
+
+    # ---- cuffie (HeadsetControl) --------------------------------------------
+    @Slot(int)
+    def setSidetone(self, value):
+        limit = int(self._current.get("sidetoneMax", 128))
+        self._edit(lambda s: s.update(sidetone=max(0, min(limit, int(value)))))
+
+    @Slot(bool)
+    def setHeadsetLights(self, on):
+        self._edit(lambda s: s.update(lights=bool(on)))
+
+    @Slot(int)
+    def setInactiveTime(self, minutes):
+        choices = self._current.get("inactiveChoices") or [0, 10, 30, 60]
+        if int(minutes) not in choices:
+            return
+        self._edit(lambda s: s.update(inactive=int(minutes)))
+
     @Slot(int)
     def nudge(self, delta):
         self._edit(lambda s: model.nudge(s, delta))
@@ -379,11 +449,13 @@ def main(argv=None) -> int:
     if ICON.exists():
         app.setWindowIcon(QIcon(str(ICON)))
 
-    backends = [MockBackend()] if args.mock else [RatbagBackend(), SysInputBackend()]
+    backends = ([MockBackend()] if args.mock else
+                [RatbagBackend(), OpenRGBBackend(), HeadsetBackend(), SysInputBackend()])
     controller = Controller(Engine(backends))
 
     qml = QQmlApplicationEngine()
     qml.rootContext().setContextProperty("app", controller)
+    qml.rootContext().setContextProperty("sniffer", controller.lab)
     qml.rootContext().setContextProperty("theme", {**THEME, "fontFamily": resolve_font_family()})
     qml.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     if not qml.rootObjects():

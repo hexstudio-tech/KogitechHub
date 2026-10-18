@@ -6,6 +6,7 @@ dentro ssh: utile per capire subito perché qualcosa non parte.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -59,9 +60,15 @@ def report() -> tuple[str, int]:
 
         lines.append(_ok("PySide6", True, f"{PySide6.__version__} (Qt {qVersion()})"))
     except Exception as exc:                                   # pragma: no cover
-        problems += 1
-        lines.append(_ok("PySide6", False, str(exc)))
-        lines.extend(f"    {cmd}" for cmd in deps.install_hint(["pyside6"], d))
+        from . import installer
+
+        vpy = installer.venv_python()
+        if vpy is not None and installer.pyside_ok(vpy):
+            lines.append(_ok("PySide6", True, f"nel venv locale ({vpy})"))
+        else:
+            problems += 1
+            lines.append(_ok("PySide6", False, str(exc)))
+            lines.extend(f"    {cmd}" for cmd in deps.install_hint(["pyside6"], d))
     display_ok, display_info = _check_display()
     lines.append(_ok("sessione grafica", display_ok, display_info))
     if not display_ok:
@@ -113,6 +120,31 @@ def report() -> tuple[str, int]:
         lines.extend(f"    {cmd}" for cmd in deps.install_hint(["gobject"], d))
     lines.append("")
 
+    # --- tastiere, cuffie e RGB (facoltativi) ------------------------------
+    lines.append("Tastiere, cuffie e RGB")
+    for key, label in (("openrgb", "OpenRGB"), ("headsetcontrol", "HeadsetControl")):
+        if shutil.which(key) is None:
+            lines.append(_ok(label, False, "non installato (facoltativo)"))
+            lines.extend(f"    {cmd}" for cmd in deps.install_hint([key], d))
+            continue
+        try:
+            if key == "openrgb":
+                from .backends.openrgb import OpenRGBBackend
+
+                backend = OpenRGBBackend()
+            else:
+                from .backends.headset import HeadsetBackend
+
+                backend = HeadsetBackend()
+            ok, message = backend.available()
+            found = backend.list() if ok else []
+            lines.append(_ok(label, ok, f"{len(found)} dispositivo/i" if ok else message))
+            for dev in found:
+                lines.append(f"    - {dev.get('name', '?')} ({dev.get('kind', '?')})")
+        except Exception as exc:                                # pragma: no cover
+            lines.append(_ok(label, False, str(exc)))
+    lines.append("")
+
     # --- voce nel menu -----------------------------------------------------
     desktop, icon = _desktop_paths()
     lines.append("Voce nelle applicazioni")
@@ -126,6 +158,7 @@ def report() -> tuple[str, int]:
 
     if problems:
         lines.append(f"ESITO: {problems} problema/i da risolvere prima di avviare l'app.")
+        lines.append("Per installarle adesso (con conferma Y/N): ./run.sh --install-deps")
     else:
         lines.append("ESITO: tutto pronto, puoi avviare KogitechHub con ./run.sh")
     return "\n".join(lines), (1 if problems else 0)

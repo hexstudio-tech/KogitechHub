@@ -33,13 +33,25 @@ Rectangle {
         MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: btn.clicked() }
     }
 
+    // icona ed etichetta del pulsante del dispositivo aperto
+    readonly property string deviceIcon: !app.current.id ? "gauge"
+                                         : app.current.lighting ? "rgb"
+                                         : app.current.headset ? "headset"
+                                         : app.current.kind === "keyboard" ? "keyboard"
+                                         : "gauge"
+    readonly property string deviceLabel: !app.current.id ? "DPI"
+                                          : app.current.lighting ? "RGB"
+                                          : app.current.headset ? "Cuffie"
+                                          : app.current.kind === "keyboard" ? "Tastiera"
+                                          : "DPI"
+
     Column {
         anchors.top: parent.top
         anchors.topMargin: 22
         spacing: 6
-        RailButton { icon: "mouse"; label: "Mouse"; selected: app.page === "dashboard"; onClicked: app.goBack() }
+        RailButton { icon: "devices"; label: "Dispositivi"; selected: app.page === "dashboard"; onClicked: app.goBack() }
         RailButton {
-            icon: "gauge"; label: "DPI"
+            icon: root.deviceIcon; label: root.deviceLabel
             visible: !!app.current.id
             selected: app.page === "device"
             onClicked: app.showDevice()

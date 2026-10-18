@@ -76,6 +76,46 @@ class DepsTests(unittest.TestCase):
         self.assertIn("systemctl enable --now ratbagd", hint)
         self.assertIn("servizio non raggiungibile", hint)
 
+    def test_install_argv_non_interactive(self):
+        deb = deps.Distro("debian", "Debian", "deb", "sudo apt install")
+        self.assertEqual(deps.install_argv("pyside6", deb),
+                         ["sudo", "apt", "install", "-y", "python3-pyside6"])
+        self.assertEqual(deps.install_argv("ratbagd", deb),
+                         ["sudo", "apt", "install", "-y", "ratbagd"])
+
+        pacman = deps.Distro("arch", "Arch", "pacman", "sudo pacman -S")
+        self.assertEqual(deps.install_argv("gobject", pacman),
+                         ["sudo", "pacman", "-S", "--needed", "--noconfirm",
+                          "python-gobject"])
+
+        rpm = deps.Distro("fedora", "Fedora", "rpm", "sudo dnf install")
+        self.assertEqual(deps.install_argv("pyside6", rpm),
+                         ["sudo", "dnf", "install", "-y", "python3-pyside6"])
+
+    def test_install_argv_empty_for_unknown_distro(self):
+        unknown = deps.Distro("weirdos", "WeirdOS", "unknown", "")
+        self.assertEqual(deps.install_argv("pyside6", unknown), [])
+
+    def test_package_name_and_gobject_build_hint(self):
+        rpm = deps.Distro("fedora", "Fedora", "rpm", "sudo dnf install")
+        self.assertEqual(deps.package_name("pyside6", rpm), "python3-pyside6")
+        self.assertIn("gobject-introspection-devel", deps.gobject_build_hint(rpm))
+
+    def test_openrgb_and_headsetcontrol_packages(self):
+        rpm = deps.Distro("fedora", "Fedora", "rpm", "sudo dnf install")
+        self.assertEqual(deps.install_argv("openrgb", rpm),
+                         ["sudo", "dnf", "install", "-y", "openrgb"])
+        self.assertEqual(deps.install_argv("headsetcontrol", rpm),
+                         ["sudo", "dnf", "install", "-y", "headsetcontrol"])
+
+        deb = deps.Distro("debian", "Debian", "deb", "sudo apt install")
+        self.assertEqual(deps.install_command("openrgb", deb), "sudo apt install openrgb")
+        self.assertEqual(deps.install_command("headsetcontrol", deb),
+                         "sudo apt install headsetcontrol")
+
+        unknown = deps.Distro("weirdos", "WeirdOS", "unknown", "")
+        self.assertEqual(deps.install_argv("openrgb", unknown), [])
+
 
 if __name__ == "__main__":
     unittest.main()

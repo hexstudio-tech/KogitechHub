@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=KogitechHub
-Comment=Configura DPI e frequenza di report del mouse
+Comment=Configura mouse, RGB di tastiere e cuffie e controlli delle cuffie
 Exec=kogitechhub
 Icon=kogitechhub
 Categories=Settings;HardwareSettings;

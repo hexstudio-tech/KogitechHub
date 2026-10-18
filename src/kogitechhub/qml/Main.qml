@@ -26,8 +26,21 @@ Window {
         anchors.bottom: parent.bottom
 
         Dashboard { anchors.fill: parent; visible: app.page === "dashboard" }
-        DevicePage { anchors.fill: parent; visible: app.page === "device" && !!app.current.configurable }
+        // un mouse libratbag ha DPI e frequenza; gli altri dispositivi hanno
+        // illuminazione (OpenRGB) oppure i controlli della cuffia (HeadsetControl)
+        DevicePage {
+            anchors.fill: parent
+            visible: app.page === "device" && !app.current.lighting
+                     && app.current.kind === "mouse" && !!app.current.configurable
+        }
+        LightingPage { anchors.fill: parent; visible: app.page === "device" && !!app.current.lighting }
+        HeadsetPage {
+            anchors.fill: parent
+            visible: app.page === "device" && !app.current.lighting && !!app.current.headset
+        }
         InfoPage { anchors.fill: parent; visible: app.page === "device" && !app.current.configurable }
+        // laboratorio HID: cattura e invio dei report delle periferiche non supportate
+        SniffPage { anchors.fill: parent; visible: app.page === "sniff" }
         AboutPage { anchors.fill: parent; visible: app.page === "about" }
     }
 

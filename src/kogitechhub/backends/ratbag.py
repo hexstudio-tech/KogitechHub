@@ -156,7 +156,7 @@ class RatbagBackend(Backend):
                 active = next((p["dpi"] for p in st["presets"] if p["active"]), 0)
                 out.append({"id": dev_id, "name": st["name"], "vendor": st["vendor"],
                             "vendorId": st["vendorId"], "productId": st["productId"],
-                            "backend": self.id, "configurable": True,
+                            "backend": self.id, "kind": "mouse", "configurable": True,
                             "dpi": active, "reportRate": st["reportRate"],
                             "presetCount": len(st["presets"]), "note": ""})
             except BackendError as exc:
@@ -168,8 +168,8 @@ class RatbagBackend(Backend):
                 vid, pid = self._ids(dev.get("Model", ""))
                 out.append({"id": dev_id, "name": dev.get("Name") or "Mouse sconosciuto",
                             "vendor": vendor_name(vid), "vendorId": vid, "productId": pid,
-                            "backend": self.id, "configurable": False, "dpi": 0,
-                            "reportRate": 0, "presetCount": 0, "note": str(exc)})
+                            "backend": self.id, "kind": "mouse", "configurable": False,
+                            "dpi": 0, "reportRate": 0, "presetCount": 0, "note": str(exc)})
         return out
 
     # --- scrittura -------------------------------------------------------

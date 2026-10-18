@@ -3,6 +3,28 @@ import QtQuick
 Item {
     id: root
 
+    function count(kind) {
+        var n = 0
+        for (var i = 0; i < app.devices.length; i++)
+            if ((app.devices[i].kind || "mouse") === kind) n++
+        return n
+    }
+    readonly property string summary: {
+        var parts = []
+        var labels = [
+            ["mouse", "mouse", "mouse"],
+            ["keyboard", "tastiera", "tastiere"],
+            ["headset", "cuffia", "cuffie"],
+            ["other", "dispositivo RGB", "dispositivi RGB"]
+        ]
+        for (var i = 0; i < labels.length; i++) {
+            var n = root.count(labels[i][0])
+            if (n > 0) parts.push(n + " " + (n === 1 ? labels[i][1] : labels[i][2]))
+        }
+        return parts.length === 0 ? "Nessun dispositivo rilevato."
+                                  : parts.join(", ") + "."
+    }
+
     Flickable {
         anchors.fill: parent
         contentWidth: width
@@ -19,12 +41,10 @@ Item {
 
             Column {
                 spacing: 6
-                Txt { text: "Mouse collegati"; font.pixelSize: 34; font.weight: Font.Light }
+                Txt { text: "Dispositivi collegati"; font.pixelSize: 34; font.weight: Font.Light }
                 Txt {
                     color: theme.muted
-                    text: app.devices.length === 0 ? "Nessun mouse rilevato."
-                          : app.devices.length === 1 ? "1 mouse rilevato. Scegline uno per configurarlo."
-                          : app.devices.length + " mouse rilevati. Scegline uno per configurarlo."
+                    text: root.summary + " Scegline uno per configurarlo."
                 }
             }
 

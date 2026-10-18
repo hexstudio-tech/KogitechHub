@@ -1,9 +1,10 @@
 import QtQuick
 
-// Pagina per i mouse che libratbag non sa configurare: solo informazioni.
+// Pagina per i dispositivi rilevati ma non configurabili: solo informazioni.
 Item {
     id: root
     readonly property var cur: app.current
+    readonly property bool canSniff: !!cur.vendorId && !!cur.productId
 
     Rectangle {
         id: backBtn
@@ -40,7 +41,7 @@ Item {
 
             Txt {
                 width: parent.width
-                text: cur.note || "Questo mouse non è configurabile da KogitechHub."
+                text: cur.note || "Questo dispositivo non è configurabile da KogitechHub."
                 color: theme.muted
                 wrapMode: Text.WordWrap
                 lineHeight: 1.25
@@ -63,6 +64,29 @@ Item {
                     spacing: 16
                     Txt { width: 140; text: modelData; color: theme.muted }
                     Txt { text: (cur.details || {})[modelData] }
+                }
+            }
+
+            Rectangle { visible: canSniff; width: parent.width; height: 1; color: theme.line }
+
+            Column {
+                id: sniffCol
+                visible: canSniff
+                width: parent.width
+                spacing: 10
+                Txt {
+                    width: parent.width
+                    color: theme.muted; font.pixelSize: 12
+                    wrapMode: Text.WordWrap; lineHeight: 1.2
+                    text: "Laboratorio HID: cattura i report che questa periferica scambia "
+                          + "con il sistema e prova a inviarne di tuoi, per ricostruire il "
+                          + "protocollo di colori e pattern quando nessun backend la "
+                          + "riconosce."
+                }
+                FlatButton {
+                    primary: true
+                    text: "Apri laboratorio HID"
+                    onClicked: { sniffer.startFor(cur.vendorId || "", cur.productId || ""); app.showSniffer() }
                 }
             }
         }

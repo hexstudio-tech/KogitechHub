@@ -13,27 +13,42 @@ Item {
             wrapMode: Text.WordWrap
             lineHeight: 1.25
             color: theme.muted
-            text: "KogitechHub configura DPI, preset e frequenza di report dei mouse tramite libratbag (servizio ratbagd). I preset vengono salvati nella memoria del mouse, quindi restano attivi anche senza KogitechHub e anche su un altro computer."
+            text: "KogitechHub configura DPI e preset dei mouse tramite libratbag (ratbagd), l'illuminazione RGB di tastiere e cuffie tramite OpenRGB e i controlli delle cuffie USB (batteria, sidetone, luci) tramite HeadsetControl. Le impostazioni dei mouse restano nella loro memoria onboard; quelle RGB vengono scritte sul controller del dispositivo."
         }
 
         Rectangle { width: parent.width; height: 1; color: theme.line }
         Txt { text: "Servizi"; font.pixelSize: 19; font.weight: Font.Medium }
         Repeater {
             model: app.backends
-            delegate: Row {
+            delegate: Column {
                 required property var modelData
-                spacing: 12
-                Rectangle {
-                    width: 10; height: 10; radius: 5
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: modelData.ok ? theme.ok : theme.amber
+                width: parent.width
+                spacing: 3
+                Row {
+                    spacing: 12
+                    Rectangle {
+                        width: 10; height: 10; radius: 5
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: modelData.ok ? theme.ok : theme.amber
+                    }
+                    Txt {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: (modelData.id === "ratbag" ? "libratbag (ratbagd)"
+                               : modelData.id === "openrgb" ? "OpenRGB (tastiere, cuffie e RGB)"
+                               : modelData.id === "headset" ? "HeadsetControl (cuffie USB)"
+                               : modelData.id === "sys" ? "Rilevamento mouse di sistema"
+                               : "Dispositivi simulati")
+                              + (modelData.ok ? ": attivo" : ": non disponibile")
+                    }
                 }
                 Txt {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: (modelData.id === "ratbag" ? "libratbag (ratbagd)"
-                           : modelData.id === "sys" ? "Rilevamento mouse di sistema"
-                           : "Mouse simulati")
-                          + (modelData.ok ? ": attivo" : ": non disponibile")
+                    visible: !modelData.ok && modelData.message !== ""
+                    x: 22
+                    width: parent.width - 22
+                    color: theme.muted
+                    font.pixelSize: 12
+                    wrapMode: Text.WordWrap
+                    text: modelData.message
                 }
             }
         }

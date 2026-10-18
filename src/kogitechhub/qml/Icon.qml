@@ -57,6 +57,29 @@ Canvas {
             ctx.beginPath(); ctx.moveTo(12, 3.5); ctx.lineTo(21.5, 20); ctx.lineTo(2.5, 20); ctx.closePath(); ctx.stroke()
             ctx.beginPath(); ctx.moveTo(12, 10); ctx.lineTo(12, 14.5); ctx.stroke()
             ctx.beginPath(); ctx.arc(12, 17.2, 1, 0, Math.PI * 2); ctx.fill()
+        } else if (name === "keyboard") {
+            rrect(ctx, 2.5, 6.5, 19, 11, 2.5); ctx.stroke()
+            for (var row = 0; row < 2; row++) {
+                for (var col = 0; col < 5; col++) {
+                    ctx.fillRect(5.5 + col * 3.1, 9.2 + row * 2.6, 1.7, 1.5)
+                }
+            }
+            ctx.fillRect(8, 14.4, 8, 1.5)
+        } else if (name === "headset") {
+            ctx.beginPath(); ctx.arc(12, 11.5, 8, Math.PI, Math.PI * 2); ctx.stroke()
+            rrect(ctx, 3.2, 11, 4.2, 7.5, 2.1); ctx.stroke()
+            rrect(ctx, 16.6, 11, 4.2, 7.5, 2.1); ctx.stroke()
+        } else if (name === "rgb") {
+            ctx.beginPath(); ctx.arc(12, 12, 8.6, 0, Math.PI * 2); ctx.stroke()
+            var dots = [[12, 6.6], [6.8, 14.8], [17.2, 14.8]]
+            for (var i = 0; i < dots.length; i++) {
+                ctx.beginPath(); ctx.arc(dots[i][0], dots[i][1], 1.7, 0, Math.PI * 2); ctx.fill()
+            }
+        } else if (name === "devices") {
+            rrect(ctx, 3, 3, 7.5, 7.5, 2); ctx.stroke()
+            rrect(ctx, 13.5, 3, 7.5, 7.5, 2); ctx.stroke()
+            rrect(ctx, 3, 13.5, 7.5, 7.5, 2); ctx.stroke()
+            rrect(ctx, 13.5, 13.5, 7.5, 7.5, 2); ctx.stroke()
         }
     }
 }
